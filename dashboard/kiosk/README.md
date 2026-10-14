@@ -126,3 +126,18 @@ adb install -r kiosk/build/homehq.apk
 
 The kiosk loads the existing hosted dashboard over the frame's Wi-Fi. A USB
 connection is only needed for installation or diagnostics, not normal use.
+
+## HONOR CHOICE PHD-ME01 (Coosea, Android 15)
+
+This firmware refuses `adb install` ("preparePackageLI forbid to install apk!") unless the package
+name is allowlisted. Build under Frameo's factory-test name, then install and set it as Home:
+
+```sh
+FRAME_PKG=net.frameo.frame.manufacturertest ANDROID_HOME=~/Library/Android/sdk \
+  BUILD_TOOLS=~/Library/Android/sdk/build-tools/36.1.0 bash kiosk/build.sh
+adb install -r kiosk/build/homehq.apk
+P=net.frameo.frame.manufacturertest
+adb shell am start -n $P/com.wesbos.homehq.MainActivity --es url https://ricardoecosta.github.io/family-dashboard/
+adb shell am start -n $P/com.wesbos.homehq.MainActivity --ez home true
+adb shell cmd package set-home-activity $P/$P.Home
+```

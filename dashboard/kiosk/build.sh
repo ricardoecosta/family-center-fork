@@ -16,8 +16,19 @@ KS="$HOME/.android/debug.keystore"
 rm -rf build && mkdir -p build/gen build/classes
 
 "$BT/aapt2" compile --dir res -o build/res.zip
-"$BT/aapt2" link -o build/base.apk -I "$JAR" --manifest AndroidManifest.xml build/res.zip \
-  --java build/gen --min-sdk-version 23 --target-sdk-version 23 --version-code 2 --version-name 1.1
+# FRAME_PKG: install under another package name. Some firmware (HONOR CHOICE PHD-ME01, Coosea
+# Android 15) only allows allowlisted package names, e.g. FRAME_PKG=net.frameo.frame.manufacturertest.
+# Android 15 also rejects target SDK < 24, so the target is 28.
+MANIFEST=AndroidManifest.xml; RENAME=()
+if [ -n "${FRAME_PKG:-}" ]; then
+  MANIFEST=build/AndroidManifest.xml
+  sed -e 's#android:name="\.\(NavigationService\|MainActivity\)"#android:name="com.wesbos.homehq.\1"#' \
+      -e 's#android:targetActivity="\.MainActivity"#android:targetActivity="com.wesbos.homehq.MainActivity"#' \
+      -e "s#android:name=\".Home\"#android:name=\"$FRAME_PKG.Home\"#" AndroidManifest.xml > "$MANIFEST"
+  RENAME=(--rename-manifest-package "$FRAME_PKG")
+fi
+"$BT/aapt2" link -o build/base.apk -I "$JAR" --manifest "$MANIFEST" build/res.zip "${RENAME[@]}" \
+  --java build/gen --custom-package com.wesbos.homehq --min-sdk-version 23 --target-sdk-version 28 --version-code 2 --version-name 1.1
 
 javac -nowarn -source 8 -target 8 -classpath "$JAR" -d build/classes \
   src/com/wesbos/homehq/*.java build/gen/com/wesbos/homehq/R.java
